@@ -14,6 +14,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
+import androidx.test.platform.app.InstrumentationRegistry
 import com.example.swpp.tododapp.R
 import com.example.swpp.tododapp.ServiceLocator
 import com.example.swpp.tododapp.data.Task
@@ -49,6 +50,10 @@ class TasksFragmentTest {
         ServiceLocator.resetRepository()
     }
 
+    /** The fake repository publishes LiveData, which must be updated on the main thread. */
+    private fun addTasks(vararg tasks: Task) =
+        InstrumentationRegistry.getInstrumentation().runOnMainSync { repository.addTasks(*tasks) }
+
     private fun checkboxOf(title: String) =
         onView(allOf(withId(R.id.complete_checkbox), hasSibling(withText(title))))
 
@@ -80,7 +85,7 @@ class TasksFragmentTest {
     @Test
     fun dueDateLabel_checkThenUncheckWithoutDueDate_showsClearThenNoLabel() {
         // GIVEN an active task without a due date on the task list
-        repository.addTasks(Task(title = "No due", isCompleted = false, dueDate = null))
+        addTasks(Task(title = "No due", isCompleted = false, dueDate = null))
         launchFragmentInContainer<TasksFragment>(Bundle(), R.style.AppTheme)
         eventually { labelOf("No due").check(matches(noLabel())) }
 
@@ -98,9 +103,7 @@ class TasksFragmentTest {
     @Test
     fun dueDateLabel_checkThenUncheckDueInThreeDays_showsClearThenDMinus3() {
         // GIVEN an active task due in 3 days on the task list
-        repository.addTasks(
-            Task(title = "Due soon", isCompleted = false, dueDate = LocalDate.now().plusDays(3))
-        )
+        addTasks(Task(title = "Due soon", isCompleted = false, dueDate = LocalDate.now().plusDays(3)))
         launchFragmentInContainer<TasksFragment>(Bundle(), R.style.AppTheme)
         eventually { labelOf("Due soon").check(matches(withText("D-3"))) }
 
